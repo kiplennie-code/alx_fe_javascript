@@ -41,7 +41,13 @@
     button:hover {
       background-color: #45a049;
     }
-    input {
+    .export-btn {
+      background-color: #2196F3;
+    }
+    .export-btn:hover {
+      background-color: #0b7dda;
+    }
+    input[type="text"] {
       padding: 10px;
       margin: 5px;
       border: 1px solid #ddd;
@@ -49,7 +55,18 @@
       width: 300px;
       font-size: 14px;
     }
+    input[type="file"] {
+      margin: 10px 5px;
+      padding: 5px;
+    }
     .add-quote-section {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .import-export-section {
       background-color: white;
       padding: 20px;
       border-radius: 10px;
@@ -78,6 +95,16 @@
       <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
       <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
       <button onclick="addQuote()">Add Quote</button>
+    </div>
+  </div>
+  
+  <div class="import-export-section">
+    <h3>Import/Export Quotes</h3>
+    <div>
+      <button class="export-btn" onclick="exportToJsonFile()">Export Quotes to JSON</button>
+      <br><br>
+      <label for="importFile">Import Quotes from JSON:</label>
+      <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
     </div>
   </div>
   
