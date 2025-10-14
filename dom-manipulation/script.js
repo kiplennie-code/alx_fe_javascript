@@ -1,102 +1,248 @@
-// Initialize quotes array with sample data
-let quotes = [
-    { text: "The only way to do great work is to love what you do.", category: "Inspiration" },
-    { text: "Innovation distinguishes between a leader and a follower.", category: "Leadership" },
-    { text: "Life is what happens when you're busy making other plans.", category: "Life" },
-    { text: "The future belongs to those who believe in the beauty of their dreams.", category: "Dreams" },
-    { text: "It is during our darkest moments that we must focus to see the light.", category: "Motivation" }
+// Default quotes data
+const defaultQuotes = [
+    { text: "The only way to do great work is to love what you do.", category: "Inspiration", author: "Steve Jobs" },
+    { text: "Innovation distinguishes between a leader and a follower.", category: "Innovation", author: "Steve Jobs" },
+    { text: "Life is what happens when you're busy making other plans.", category: "Life", author: "John Lennon" },
+    { text: "The future belongs to those who believe in the beauty of their dreams.", category: "Dreams", author: "Eleanor Roosevelt" },
+    { text: "It is during our darkest moments that we must focus to see the light.", category: "Perseverance", author: "Aristotle" },
+    { text: "The only impossible journey is the one you never begin.", category: "Motivation", author: "Tony Robbins" },
+    { text: "Success is not final, failure is not fatal.", category: "Success", author: "Winston Churchill" },
+    { text: "Believe you can and you're halfway there.", category: "Motivation", author: "Theodore Roosevelt" }
 ];
 
-/**
- * Initialize on page load
- * Sets up event listeners and displays initial content
- */
-document.addEventListener('DOMContentLoaded', function() {
-    displayAllQuotes();
-    document.getElementById('newQuote').addEventListener('click', showRandomQuote);
-});
+const STORAGE_KEY = 'quotes_data';
+let quotes = [];
 
-/**
- * Display a random quote from the array
- * Updates the quote display section with random quote text and category
- */
-function showRandomQuote() {
+// Initialize the application
+function init() {
+    loadQuotesFromStorage();
+    
     if (quotes.length === 0) {
-        alert('No quotes available. Please add some quotes first.');
+        quotes = JSON.parse(JSON.stringify(defaultQuotes));
+        saveQuotesToStorage();
+    }
+    
+    setupEventListeners();
+    populateCategoryFilter();
+    displayRandomQuote();
+    displaySavedQuotes();
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    document.getElementById('newQuote').addEventListener('click', displayRandomQuote);
+    document.getElementById('addQuote').addEventListener('click', addQuote);
+    document.getElementById('exportData').addEventListener('click', exportData);
+    document.getElementById('clearStorage').addEventListener('click', clearStorage);
+    document.getElementById('categoryFilter').addEventListener('change', filterQuotes);
+}
+
+// Load quotes from local storage
+function loadQuotesFromStorage() {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            quotes = JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('Error loading from storage:', error);
+        quotes = [];
+    }
+}
+
+// Save quotes to local storage
+function saveQuotesToStorage() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(quotes));
+    } catch (error) {
+        console.error('Error saving to storage:', error);
+        showMessage('Error saving data', 'error');
+    }
+}
+
+// Display a random quote
+function displayRandomQuote(filteredQuotes = null) {
+    const quoteArray = filteredQuotes || quotes;
+    
+    if (quoteArray.length === 0) {
+        document.getElementById('quoteDisplay').innerHTML = `
+            <p class="quote-text">No quotes available</p>
+            <p class="quote-category">Add some quotes to get started!</p>
+        `;
         return;
     }
+    
+    const randomIndex = Math.floor(Math.random() * quoteArray.length);
+    const quote = quoteArray[randomIndex];
+    displayQuote(quote);
+}
 
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    const randomQuote = quotes[randomIndex];
-
-    const quoteDisplay = document.getElementById('quoteDisplay');
-    quoteDisplay.innerHTML = `
-        <div class="quote-text">"${randomQuote.text}"</div>
-        <div class="quote-category">Category: ${randomQuote.category}</div>
+// Display a specific quote
+function displayQuote(quote) {
+    const display = document.getElementById('quoteDisplay');
+    display.innerHTML = `
+        <p class="quote-text">"${quote.text}"</p>
+        <p class="quote-category">Category: ${quote.category}</p>
+        <p class="quote-author">— ${quote.author || 'Unknown'}</p>
     `;
 }
 
-/**
- * Add a new quote to the array and update display
- * Validates user input before adding
- * Clears input fields after successful addition
- * Shows success message and updates display
- */
-function addQuote() {
-    const quoteText = document.getElementById('newQuoteText').value.trim();
-    const quoteCategory = document.getElementById('newQuoteCategory').value.trim();
+// Populate category filter dropdown
+function populateCategoryFilter() {
+    const categories = [...new Set(quotes.map(q => q.category))].sort();
+    const select = document.getElementById('categoryFilter');
+    const currentValue = select.value;
+    
+    select.innerHTML = '<option value="">All Categories</option>';
+    
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        select.appendChild(option);
+    });
+    
+    select.value = currentValue;
+}
 
-    // Validation: Check if both fields are filled
-    if (!quoteText || !quoteCategory) {
-        alert('Please enter both quote text and category.');
+// Filter quotes by category
+function filterQuotes() {
+    const selectedCategory = document.getElementById('categoryFilter').value;
+    const filtered = selectedCategory === '' 
+        ? quotes 
+        : quotes.filter(q => q.category === selectedCategory);
+    
+    displayRandomQuote(filtered);
+    displaySavedQuotes(filtered);
+}
+
+// Create add quote form (for DOM manipulation task)
+function createAddQuoteForm() {
+    const form = document.createElement('div');
+    form.className = 'add-quote-form';
+    form.innerHTML = `
+        <h3>Add a New Quote</h3>
+        <input type="text" id="formQuoteText" placeholder="Enter quote text" />
+        <input type="text" id="formQuoteCategory" placeholder="Enter category" />
+        <input type="text" id="formQuoteAuthor" placeholder="Enter author (optional)" />
+        <button id="formSubmitBtn">Add Quote</button>
+    `;
+    return form;
+}
+
+// Add a new quote
+function addQuote() {
+    const text = document.getElementById('newQuoteText').value.trim();
+    const category = document.getElementById('newQuoteCategory').value.trim();
+    const author = document.getElementById('newQuoteAuthor').value.trim();
+    
+    if (!text || !category) {
+        showMessage('Please enter both quote text and category', 'error');
         return;
     }
-
-    // Create quote object
+    
     const newQuote = {
-        text: quoteText,
-        category: quoteCategory
+        text: text,
+        category: category,
+        author: author || 'Unknown'
     };
-
-    // Add to quotes array
+    
     quotes.push(newQuote);
-
-    // Clear input fields
+    saveQuotesToStorage();
+    populateCategoryFilter();
+    displaySavedQuotes();
+    
+    // Clear form
     document.getElementById('newQuoteText').value = '';
     document.getElementById('newQuoteCategory').value = '';
-
-    // Show success message
-    const successMsg = document.getElementById('successMessage');
-    successMsg.style.display = 'block';
-    setTimeout(() => {
-        successMsg.style.display = 'none';
-    }, 2000);
-
-    // Update display
-    displayAllQuotes();
+    document.getElementById('newQuoteAuthor').value = '';
+    
+    showMessage('Quote added successfully!', 'success');
 }
 
-/**
- * Display all quotes in the list
- * Renders each quote with its index, text, and category
- * Shows a message if no quotes exist
- */
-function displayAllQuotes() {
-    const quotesList = document.getElementById('quotesList');
-    quotesList.innerHTML = '';
-
-    if (quotes.length === 0) {
-        quotesList.innerHTML = '<p style="color: #999;">No quotes yet. Add one to get started!</p>';
+// Display all saved quotes
+function displaySavedQuotes(quoteArray = null) {
+    const list = quoteArray || quotes;
+    const container = document.getElementById('quotesList');
+    
+    if (list.length === 0) {
+        container.innerHTML = '<p class="empty-state">No quotes saved yet</p>';
         return;
     }
-
-    quotes.forEach((quote, index) => {
-        const quoteItem = document.createElement('div');
-        quoteItem.className = 'quote-item';
-        quoteItem.innerHTML = `
-            <div class="quote-item-text">${index + 1}. "${quote.text}"</div>
-            <div class="quote-item-category">${quote.category}</div>
-        `;
-        quotesList.appendChild(quoteItem);
-    });
+    
+    container.innerHTML = list.map((quote, index) => `
+        <div class="quote-item">
+            <div class="quote-item-text">"${quote.text}"</div>
+            <div class="quote-item-category">${quote.category} • ${quote.author}</div>
+            <button class="btn-sm" onclick="deleteQuote(${quotes.indexOf(quote)})">Delete</button>
+        </div>
+    `).join('');
 }
+
+// Delete a quote
+function deleteQuote(index) {
+    if (index >= 0 && index < quotes.length) {
+        quotes.splice(index, 1);
+        saveQuotesToStorage();
+        populateCategoryFilter();
+        filterQuotes();
+        showMessage('Quote deleted successfully!', 'success');
+    }
+}
+
+// Export quotes as JSON
+function exportData() {
+    const dataStr = JSON.stringify(quotes, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'quotes.json';
+    link.click();
+    URL.revokeObjectURL(url);
+    showMessage('Quotes exported successfully!', 'success');
+}
+
+// Import quotes from JSON
+function importData(jsonData) {
+    try {
+        const importedQuotes = JSON.parse(jsonData);
+        if (Array.isArray(importedQuotes)) {
+            quotes = importedQuotes;
+            saveQuotesToStorage();
+            populateCategoryFilter();
+            displaySavedQuotes();
+            showMessage('Quotes imported successfully!', 'success');
+        } else {
+            showMessage('Invalid JSON format', 'error');
+        }
+    } catch (error) {
+        console.error('Error importing data:', error);
+        showMessage('Error importing quotes', 'error');
+    }
+}
+
+// Clear all storage
+function clearStorage() {
+    if (confirm('Are you sure you want to clear all quotes? This action cannot be undone.')) {
+        localStorage.removeItem(STORAGE_KEY);
+        quotes = [];
+        init();
+        showMessage('All data cleared successfully!', 'success');
+    }
+}
+
+// Show message feedback
+function showMessage(text, type) {
+    const messageDiv = document.getElementById('message');
+    messageDiv.textContent = text;
+    messageDiv.className = `message show ${type}`;
+    
+    setTimeout(() => {
+        messageDiv.textContent = '';
+        messageDiv.className = 'message';
+    }, 3000);
+}
+
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', init);
