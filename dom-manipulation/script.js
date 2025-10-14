@@ -8,7 +8,7 @@ let quotes = [
   { text: "In three words I can sum up everything I've learned about life: it goes on.", category: "life" }
 ];
 
-// Function to display a random quote
+// Function to display a random quote using createElement and appendChild
 function showRandomQuote() {
   // Generate a random index
   const randomIndex = Math.floor(Math.random() * quotes.length);
@@ -19,11 +19,25 @@ function showRandomQuote() {
   // Get the quote display element
   const quoteDisplay = document.getElementById("quoteDisplay");
   
-  // Update the display with the quote
-  quoteDisplay.innerHTML = `
-    <p><strong>"${randomQuote.text}"</strong></p>
-    <p class="category">Category: ${randomQuote.category}</p>
-  `;
+  // Clear previous content
+  quoteDisplay.innerHTML = "";
+  
+  // Create paragraph element for quote text
+  const quoteText = document.createElement("p");
+  quoteText.textContent = `"${randomQuote.text}"`;
+  quoteText.style.fontWeight = "bold";
+  quoteText.style.fontSize = "18px";
+  
+  // Create paragraph element for category
+  const quoteCategory = document.createElement("p");
+  quoteCategory.textContent = `Category: ${randomQuote.category}`;
+  quoteCategory.className = "category";
+  quoteCategory.style.fontStyle = "italic";
+  quoteCategory.style.color = "#666";
+  
+  // Append elements to quote display
+  quoteDisplay.appendChild(quoteText);
+  quoteDisplay.appendChild(quoteCategory);
 }
 
 // Function to add a new quote
@@ -58,22 +72,46 @@ function addQuote() {
   showRandomQuote();
 }
 
-// Function to create the add quote form (alternative implementation)
+// Function to create the add quote form dynamically using createElement
 function createAddQuoteForm() {
-  const formHTML = `
-    <div>
-      <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
-      <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
-      <button onclick="addQuote()">Add Quote</button>
-    </div>
-  `;
+  // Create container div
+  const formDiv = document.createElement("div");
+  formDiv.className = "add-quote-section";
   
-  // You can insert this wherever needed in your DOM
-  return formHTML;
+  // Create heading
+  const heading = document.createElement("h3");
+  heading.textContent = "Add Your Own Quote";
+  
+  // Create input for quote text
+  const quoteInput = document.createElement("input");
+  quoteInput.id = "newQuoteText";
+  quoteInput.type = "text";
+  quoteInput.placeholder = "Enter a new quote";
+  
+  // Create input for category
+  const categoryInput = document.createElement("input");
+  categoryInput.id = "newQuoteCategory";
+  categoryInput.type = "text";
+  categoryInput.placeholder = "Enter quote category";
+  
+  // Create add button
+  const addButton = document.createElement("button");
+  addButton.textContent = "Add Quote";
+  addButton.onclick = addQuote;
+  
+  // Append all elements to form div
+  formDiv.appendChild(heading);
+  formDiv.appendChild(quoteInput);
+  formDiv.appendChild(categoryInput);
+  formDiv.appendChild(addButton);
+  
+  // Return the form or append to body
+  document.body.appendChild(formDiv);
 }
 
 // Add event listener to the "Show New Quote" button
-document.getElementById("newQuote").addEventListener("click", showRandomQuote);
+const newQuoteButton = document.getElementById("newQuote");
+newQuoteButton.addEventListener("click", showRandomQuote);
 
 // Display a random quote when the page loads
 showRandomQuote();
