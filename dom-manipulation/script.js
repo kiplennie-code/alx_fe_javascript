@@ -116,20 +116,6 @@ function filterQuotes() {
     displaySavedQuotes(filtered);
 }
 
-// Create add quote form (for DOM manipulation task)
-function createAddQuoteForm() {
-    const form = document.createElement('div');
-    form.className = 'add-quote-form';
-    form.innerHTML = `
-        <h3>Add a New Quote</h3>
-        <input type="text" id="formQuoteText" placeholder="Enter quote text" />
-        <input type="text" id="formQuoteCategory" placeholder="Enter category" />
-        <input type="text" id="formQuoteAuthor" placeholder="Enter author (optional)" />
-        <button id="formSubmitBtn">Add Quote</button>
-    `;
-    return form;
-}
-
 // Add a new quote
 function addQuote() {
     const text = document.getElementById('newQuoteText').value.trim();
@@ -201,25 +187,6 @@ function exportData() {
     link.click();
     URL.revokeObjectURL(url);
     showMessage('Quotes exported successfully!', 'success');
-}
-
-// Import quotes from JSON
-function importData(jsonData) {
-    try {
-        const importedQuotes = JSON.parse(jsonData);
-        if (Array.isArray(importedQuotes)) {
-            quotes = importedQuotes;
-            saveQuotesToStorage();
-            populateCategoryFilter();
-            displaySavedQuotes();
-            showMessage('Quotes imported successfully!', 'success');
-        } else {
-            showMessage('Invalid JSON format', 'error');
-        }
-    } catch (error) {
-        console.error('Error importing data:', error);
-        showMessage('Error importing quotes', 'error');
-    }
 }
 
 // Clear all storage
