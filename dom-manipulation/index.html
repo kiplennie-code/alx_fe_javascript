@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dynamic Quote Generator</title>
+  <title>Dynamic Quote Generator with Server Sync</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 800px;
+      max-width: 900px;
       margin: 50px auto;
       padding: 20px;
       background-color: #f5f5f5;
@@ -35,6 +35,49 @@
       margin: 20px 0;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
+    .sync-section {
+      background-color: #e3f2fd;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-left: 4px solid #2196F3;
+    }
+    .sync-section h3 {
+      color: #1976D2;
+      margin-top: 0;
+    }
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ccc;
+    }
+    .status-indicator.synced {
+      background-color: #4CAF50;
+      animation: pulse 2s infinite;
+    }
+    .status-indicator.syncing {
+      background-color: #FF9800;
+      animation: blink 1s infinite;
+    }
+    .status-indicator.error {
+      background-color: #f44336;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0.3; }
+    }
     label {
       font-weight: bold;
       margin-right: 10px;
@@ -61,11 +104,21 @@
     button:hover {
       background-color: #45a049;
     }
-    .export-btn {
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .sync-btn {
       background-color: #2196F3;
     }
-    .export-btn:hover {
+    .sync-btn:hover {
       background-color: #0b7dda;
+    }
+    .export-btn {
+      background-color: #FF9800;
+    }
+    .export-btn:hover {
+      background-color: #e68900;
     }
     input[type="text"] {
       padding: 10px;
@@ -79,14 +132,7 @@
       margin: 10px 5px;
       padding: 5px;
     }
-    .add-quote-section {
-      background-color: white;
-      padding: 20px;
-      border-radius: 10px;
-      margin-top: 30px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .import-export-section {
+    .add-quote-section, .import-export-section {
       background-color: white;
       padding: 20px;
       border-radius: 10px;
@@ -98,17 +144,122 @@
       font-style: italic;
       font-size: 14px;
     }
+    
+    /* Notification Styles */
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 1000;
+      max-width: 350px;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    .notification.success {
+      background-color: #4CAF50;
+    }
+    .notification.error {
+      background-color: #f44336;
+    }
+    .notification.info {
+      background-color: #2196F3;
+    }
+    .notification.warning {
+      background-color: #FF9800;
+    }
+    
+    /* Conflict Resolution Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background-color: white;
+      margin: 10% auto;
+      padding: 30px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 600px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    }
+    .modal-content h3 {
+      color: #f44336;
+      margin-top: 0;
+    }
+    .conflict-item {
+      background-color: #f5f5f5;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border-left: 4px solid #FF9800;
+    }
+    .modal-buttons {
+      margin-top: 20px;
+      text-align: right;
+    }
   </style>
 </head>
 <body>
   <h1>Dynamic Quote Generator</h1>
+  
+  <!-- Notification Area -->
+  <div id="notification" class="notification"></div>
+  
+  <!-- Conflict Resolution Modal -->
+  <div id="conflictModal" class="modal">
+    <div class="modal-content">
+      <h3>⚠️ Conflict Detected</h3>
+      <p id="conflictMessage">Server data conflicts with local data.</p>
+      <div id="conflictDetails"></div>
+      <div class="modal-buttons">
+        <button onclick="resolveConflict('server')">Use Server Data</button>
+        <button onclick="resolveConflict('local')">Keep Local Data</button>
+        <button onclick="resolveConflict('merge')">Merge Both</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Server Sync Section -->
+  <div class="sync-section">
+    <h3>🔄 Server Synchronization</h3>
+    <div class="sync-status">
+      <span class="status-indicator" id="syncIndicator"></span>
+      <span id="syncStatus">Not synced</span>
+    </div>
+    <p><small>Last synced: <span id="lastSyncTime">Never</span></small></p>
+    <button class="sync-btn" onclick="syncQuotes()" id="syncButton">Sync with Server Now</button>
+    <label>
+      <input type="checkbox" id="autoSyncToggle" checked onchange="toggleAutoSync()">
+      Auto-sync every 30 seconds
+    </label>
+  </div>
   
   <!-- Category Filter Section -->
   <div class="filter-section">
     <label for="categoryFilter">Filter by Category:</label>
     <select id="categoryFilter" onchange="filterQuotes()">
       <option value="all">All Categories</option>
-      <!-- Dynamically populated categories -->
     </select>
   </div>
   
